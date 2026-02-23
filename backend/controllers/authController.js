@@ -2,6 +2,16 @@
 const jwt = require('jsonwebtoken');
 const { getPool } = require('../config/db');
 
+function getCookieOptions() {
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  return {
+    httpOnly: true,
+    sameSite: isProduction ? 'none' : 'lax',
+    secure: isProduction,
+  };
+}
+
 async function register(req, res, next) {
   try {
     const { username, email, password, phone } = req.body;
@@ -92,10 +102,7 @@ async function login(req, res, next) {
       [token, user.uid, expiry]
     );
 
-    res.cookie('token', token, {
-      httpOnly: true,
-      sameSite: 'lax',
-    });
+    res.cookie('token', token, getCookieOptions());
 
     return res.status(200).json({
       success: true,
@@ -119,10 +126,7 @@ async function logout(req, res, next) {
       );
     }
 
-    res.clearCookie('token', {
-      httpOnly: true,
-      sameSite: 'lax',
-    });
+    res.clearCookie('token', getCookieOptions());
 
     return res.status(200).json({
       success: true,

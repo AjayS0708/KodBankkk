@@ -11,12 +11,36 @@ const { notFoundHandler, errorHandler } = require('./middleware/errorMiddleware'
 
 const app = express();
 
+const allowedOrigins = (process.env.CORS_ORIGIN || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+const originValidator = (origin, callback) => {
+  // Allow server-to-server and non-browser requests without Origin header.
+  if (!origin) {
+    return callback(null, true);
+  }
+
+  const isConfiguredAllowed = allowedOrigins.includes(origin);
+  const isVercelPreview = /^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin);
+  const isLocalhost =
+    origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:');
+
+  if (isConfiguredAllowed || isVercelPreview || isLocalhost) {
+    return callback(null, true);
+  }
+
+  return callback(new Error('Not allowed by CORS'));
+};
+
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN,
+    origin: originValidator,
     credentials: true,
   })
 );
+app.options('*', cors({ origin: originValidator, credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
